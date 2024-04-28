@@ -8,18 +8,27 @@ import os
 parser = argparse.ArgumentParser(description="mp4转换gif")
 parser.add_argument("load_path", type=str, help="视频读取路径，当参数有F时，必须是一个文件夹")
 parser.add_argument("save_path", type=str, help="视频保存路径，当参数有F时，必须是一个文件夹")
-parser.add_argument("-S",
-                    "--size",
-                    type=float,
-                    default=0.5,
-                    help="视频缩放，格式为0-1之间的小数，默认为0.5")
 parser.add_argument("-F", "--folder", action='store_true', help="打开的是否文件夹，默认否")
+parser.add_argument(
+    "-S",
+    "--size",
+    type=float,
+    default=0.5,
+    help="视频缩放，格式为0-1之间的小数，默认为0.5"
+)
 parser.add_argument(
     "-R",
     "--reduce",
     type=int,
     default=1,
     help="抽帧，输入值代表隔几帧保存一次，默认1也即不抽帧",
+)
+parser.add_argument(
+    "-D",
+    "--duration",
+    type=int,
+    default=40,
+    help="持续时间，默认40",
 )
 args = parser.parse_args()
 gif_frames = []
@@ -66,7 +75,7 @@ def convert_images_to_gif(output_file):
         ],
         save_all=True,
         loop=0,
-        duration=40,
+        duration=args.duration,
     )
 
     gif_frames = []

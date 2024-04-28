@@ -3,3 +3,4 @@ output
 venv
 *.gif
 *.mp4
+.idea

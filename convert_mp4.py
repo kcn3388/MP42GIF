@@ -1,20 +1,25 @@
 # from moviepy.editor import *
 import argparse
-import cv2
 import copy
-from PIL import Image
+import cv2
 import os
+import re
+
+from PIL import Image
 
 parser = argparse.ArgumentParser(description="mp4转换gif")
-parser.add_argument("load_path", type=str, help="视频读取路径，当参数有F时，必须是一个文件夹")
-parser.add_argument("save_path", type=str, help="视频保存路径，当参数有F时，必须是一个文件夹")
-parser.add_argument("-F", "--folder", action='store_true', help="打开的是否文件夹，默认否")
+parser.add_argument("load_path", type=str, help="视频读取路径，可以是一个文件夹")
+parser.add_argument(
+    "save_path", type=str,
+    help="视频保存路径，可以是一个文件夹。注意：读取的是文件夹时不支持指定保存的文件名"
+)
+# parser.add_argument("-F", "--folder", action='store_true', help="打开的是否文件夹，默认否")
 parser.add_argument(
     "-S",
     "--size",
     type=float,
     default=0.5,
-    help="视频缩放，格式为0-1之间的小数，默认为0.5"
+    help="视频缩放，格式为大于0的小数，默认为0.5"
 )
 parser.add_argument(
     "-R",
@@ -83,23 +88,28 @@ def convert_images_to_gif(output_file):
 
 def convert_mp4_to_gif(load, save):
     images = []
-    if not 0 < args.size <= 1:
-        print("尺寸输入错误，应为0-1之间的小数")
+    if args.size <= 0:
+        print("尺寸输入错误，应为大于0的小数")
         return
-    if args.folder:
+    load_path = os.path.join(os.getcwd(), load)
+    if os.path.isdir(load_path):
         images = os.listdir(load)
         images.sort()
-    load_path = os.path.join(os.getcwd(), load)
-    if not images:
+    elif os.path.isfile(load_path):
         images.append(load_path)
+    else:
+        print("输入路径错误")
     for image in images:
-        if args.folder:
-            load_path = os.path.join(os.getcwd(), load, image)
-            image_file_name = os.path.splitext(os.path.split(image)[-1])[0]
-            save_path = os.path.join(os.getcwd(), save, f"{image_file_name}.gif")
+        file_path = load_path
+        if os.path.isdir(load_path):
+            file_path = os.path.join(os.getcwd(), load, image)
+            image_file_name = os.path.splitext(os.path.split(image)[-1])
+            if not re.match(r"\.mp4", image_file_name[-1], re.IGNORECASE):
+                continue
+            save_path = os.path.join(os.getcwd(), save, f"{image_file_name[0]}.gif")
         else:
             save_path = os.path.join(os.getcwd(), save)
-        convert_mp4_to_jpgs(load_path)
+        convert_mp4_to_jpgs(file_path)
         convert_images_to_gif(save_path)
 
 

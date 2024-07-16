@@ -60,7 +60,8 @@ def convert_mp4_to_jpgs(input_file, split_path):
     still_reading, image = video_capture.read()
     frame_count = 0
     f_name = os.path.splitext(os.path.split(input_file)[-1])[0]
-    os.makedirs(f"{split_path}/{f_name}") if not os.path.exists(f"{split_path}/{f_name}") else 0
+    if args.split:
+        os.makedirs(f"{split_path}/{f_name}") if not os.path.exists(f"{split_path}/{f_name}") else 0
     while still_reading:
         img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGBA))
         gif_frames.append(img)

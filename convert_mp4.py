@@ -19,7 +19,7 @@ parser.add_argument(
     "-S",
     "--size",
     type=float,
-    default=0.5,
+    default=1,
     help="视频缩放，格式为大于0的小数，默认为0.5"
 )
 parser.add_argument(

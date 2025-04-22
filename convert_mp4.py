@@ -63,7 +63,7 @@ parser.add_argument(
     "-DS", "--disposal",
     type=int,
     default=0,
-    help="指定保存格式，能修复透明gif叠加的问题，模式为2"
+    help="指定保存格式，能修复部分透明gif叠加的问题，建议模式为2"
 )
 args = parser.parse_args()
 gif_frames: List[Image.Image] = []
@@ -71,16 +71,18 @@ gif_frames: List[Image.Image] = []
 
 def convert_mp4_to_jpgs(input_file, split_path, is_img=False):
     global gif_frames
+    f_name = os.path.splitext(os.path.split(input_file)[-1])[0]
+    save_split_path = os.path.join(split_path, f_name)
     if is_img:
         im = Image.open(input_file)
         frames = [frame.copy() for frame in ImageSequence.Iterator(im)]
         gif_frames = frames
         if args.split:
             frame_count = 0
-            f_name = os.path.splitext(os.path.split(input_file)[-1])[0]
-            os.makedirs(f"{split_path}/{f_name}") if not os.path.exists(f"{split_path}/{f_name}") else 0
+            os.makedirs(save_split_path) if not os.path.exists(save_split_path) else 0
             for frame in gif_frames:
-                frame.save(f"{split_path}/{f_name}/000{frame_count}.png", "PNG")
+                save_split_img_path = os.path.join(split_path, f_name, f"000{frame_count}.png")
+                frame.save(save_split_img_path, "PNG")
                 frame_count += 1
 
     else:
@@ -88,20 +90,20 @@ def convert_mp4_to_jpgs(input_file, split_path, is_img=False):
         video_capture = cv2.VideoCapture(input_file)
         still_reading, image = video_capture.read()
         frame_count = 0
-        f_name = os.path.splitext(os.path.split(input_file)[-1])[0]
         if args.split:
-            os.makedirs(f"{split_path}/{f_name}") if not os.path.exists(f"{split_path}/{f_name}") else 0
+            os.makedirs(save_split_path) if not os.path.exists(split_path) else 0
         while still_reading:
             img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGBA))
             gif_frames.append(img)
             if args.split:
-                img.save(f"{split_path}/{f_name}/000{frame_count}.png", "PNG")
+                save_split_img_path = os.path.join(split_path, f_name, f"000{frame_count}.png")
+                img.save(save_split_img_path, "PNG")
             # read next image
             still_reading, image = video_capture.read()
             frame_count += 1
 
 
-def convert_images_to_gif(output_file, resize_ratio: Tuple[int, int] = None):
+def convert_images_to_gif(input_file, output_file, resize_ratio: Tuple[int, int] = None):
     # 读取目录下图片，用Pillow模块的Image和所有图片合并成一张gif
     global gif_frames
     frames_origin: List[Image.Image] = copy.deepcopy(gif_frames)
@@ -134,31 +136,26 @@ def convert_images_to_gif(output_file, resize_ratio: Tuple[int, int] = None):
     # final = frames_rgba if args.alpha else frames
     # frame_one = final[0]
     frame_one = frames[0]
-    if resize_ratio:
-        frame_one.save(
-            f"{output_file}.png" if args.apng else f"{output_file}.gif",
-            format="PNG" if args.apng else "GIF",
-            append_images=[
-                # f for i, f in enumerate(final[1:]) if i % args.reduce == 0
-                f for i, f in enumerate(frames[1:]) if i % args.reduce == 0
-            ],
-            save_all=True,
-            loop=0,
-            disposal=args.disposal
-        )
+    f_name = os.path.splitext(os.path.split(input_file)[-1])[0]
+    file_split = os.path.splitext(os.path.split(output_file)[-1])
+    if re.match(r"\.gif", file_split[-1], re.IGNORECASE):
+        file = file_split[0] + file_split[-1]
+        output_file = output_file.replace(file, "")
     else:
-        frame_one.save(
-            f"{output_file}.png" if args.apng else f"{output_file}.gif",
-            format="PNG" if args.apng else "GIF",
-            append_images=[
-                # f for i, f in enumerate(final[1:]) if i % args.reduce == 0
-                f for i, f in enumerate(frames[1:]) if i % args.reduce == 0
-            ],
-            save_all=True,
-            loop=0,
-            duration=args.duration,
-            disposal=args.disposal
-        )
+        file = f"{f_name}.png" if args.apng else f"{f_name}.gif"
+    if not os.path.exists(output_file):
+        os.makedirs(output_file)
+    frame_one.save(
+        os.path.join(output_file, file),
+        format="PNG" if args.apng else "GIF",
+        append_images=[
+            f for i, f in enumerate(frames[1:]) if i % args.reduce == 0
+        ],
+        save_all=True,
+        loop=0,
+        duration=args.duration,
+        disposal=args.disposal
+    )
 
     gif_frames = []
 
@@ -202,7 +199,7 @@ def convert_mp4_to_gif(load, save):
                         is_img = True
                     else:
                         continue
-                save_path = os.path.join(os.getcwd(), save, image_file_name[0])
+                save_path = os.path.join(os.getcwd(), save)
         else:
             if re.search(r"(\.webp|\.gif)", file_path, re.IGNORECASE):
                 is_img = True
@@ -210,11 +207,11 @@ def convert_mp4_to_gif(load, save):
         if args.combine:
             for each in images:
                 gif_frames.append(Image.open(f"{file_path}/{each}"))
-            convert_images_to_gif(save_path)
+            convert_images_to_gif(file_path, save_path)
             break
         else:
             convert_mp4_to_jpgs(file_path, save_path, is_img)
-            convert_images_to_gif(save_path, resize_ratio) if not args.nogif else 0
+            convert_images_to_gif(file_path, save_path, resize_ratio) if not args.nogif else 0
 
 
 convert_mp4_to_gif(args.load_path, args.save_path)
